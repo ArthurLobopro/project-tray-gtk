@@ -121,6 +121,10 @@ impl ksni::Tray for AppTray {
         "folder".into()
     }
 
+    fn item_is_menu(&self) -> bool {
+        true
+    }
+
     fn menu(&self) -> Vec<MenuItem<Self>> {
         let mut menu: Vec<MenuItem<Self>> = Vec::new();
         let available_launchers: Vec<&crate::data::Launcher> = self
