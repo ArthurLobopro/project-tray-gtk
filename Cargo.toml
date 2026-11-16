@@ -1,0 +1,13 @@
+[package]
+name = "project-tray"
+version = "0.1.0"
+edition = "2021"
+description = "System tray para abrir projetos no terminal, editores e agentes de IA"
+
+[dependencies]
+gtk = { version = "0.9", package = "gtk4", features = ["v4_10"] }
+ksni = "0.2"
+async-channel = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+dirs = "5"
