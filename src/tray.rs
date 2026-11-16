@@ -54,21 +54,33 @@ impl AppTray {
         project: &Project,
         category: Option<usize>,
         index: usize,
+        available_launchers: &[&crate::data::Launcher],
     ) -> MenuItem<Self> {
         let mut items: Vec<MenuItem<Self>> = Vec::new();
         let mut last_group: Option<&str> = None;
 
-        for l in &self.data.launchers {
+        for l in available_launchers {
             if last_group.is_some() && last_group != Some(l.group.as_str()) {
                 items.push(MenuItem::Separator);
             }
             last_group = Some(l.group.as_str());
 
-            let (launcher, path) = (l.clone(), project.path.clone());
+            let (launcher, path) = ((*l).clone(), project.path.clone());
             items.push(
                 StandardItem {
                     label: l.name.clone(),
                     activate: Box::new(move |_| launcher::open(&launcher, &path)),
+                    ..Default::default()
+                }
+                .into(),
+            );
+        }
+
+        if items.is_empty() {
+            items.push(
+                StandardItem {
+                    label: "(nenhum aplicativo instalado)".into(),
+                    enabled: false,
                     ..Default::default()
                 }
                 .into(),
@@ -111,6 +123,12 @@ impl ksni::Tray for AppTray {
 
     fn menu(&self) -> Vec<MenuItem<Self>> {
         let mut menu: Vec<MenuItem<Self>> = Vec::new();
+        let available_launchers: Vec<&crate::data::Launcher> = self
+            .data
+            .launchers
+            .iter()
+            .filter(|l| launcher::is_available(l))
+            .collect();
 
         // 1) categorias primeiro
         for (ci, cat) in self.data.categories.iter().enumerate() {
@@ -118,7 +136,7 @@ impl ksni::Tray for AppTray {
                 .projects
                 .iter()
                 .enumerate()
-                .map(|(pi, p)| self.project_item(p, Some(ci), pi))
+                .map(|(pi, p)| self.project_item(p, Some(ci), pi, &available_launchers))
                 .collect();
 
             if sub.is_empty() {
@@ -158,7 +176,7 @@ impl ksni::Tray for AppTray {
             menu.push(MenuItem::Separator);
         }
         for (pi, p) in self.data.projects.iter().enumerate() {
-            menu.push(self.project_item(p, None, pi));
+            menu.push(self.project_item(p, None, pi, &available_launchers));
         }
 
         if self.data.categories.is_empty() && self.data.projects.is_empty() {
