@@ -28,6 +28,9 @@ pub struct Launcher {
     pub command: String,
     #[serde(default)]
     pub in_terminal: bool,
+    /// Nome do ícone no tema FreeDesktop (ex: "vscode", "zed", "system-file-manager")
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -42,25 +45,26 @@ pub struct Data {
     pub launchers: Vec<Launcher>,
 }
 
-fn launcher(name: &str, group: &str, command: &str, in_terminal: bool) -> Launcher {
+fn launcher(name: &str, group: &str, command: &str, in_terminal: bool, icon: Option<&str>) -> Launcher {
     Launcher {
         name: name.into(),
         group: group.into(),
         command: command.into(),
         in_terminal,
+        icon: icon.map(String::from),
     }
 }
 
 pub fn default_launchers() -> Vec<Launcher> {
     vec![
-        launcher("Abrir no terminal", "Terminal", "", true),
-        launcher("VS Code", "Editores", "code {path}", false),
-        launcher("Cursor", "Editores", "cursor {path}", false),
-        launcher("Zed", "Editores", "zed {path}", false),
-        launcher("Claude Code", "Agentes de IA", "claude", true),
-        launcher("Gemini CLI", "Agentes de IA", "gemini", true),
-        launcher("Codex", "Agentes de IA", "codex", true),
-        launcher("Gerenciador de arquivos", "Arquivos", "xdg-open {path}", false),
+        launcher("Abrir no terminal", "Terminal", "", true, Some("utilities-terminal")),
+        launcher("VS Code", "Editores", "code {path}", false, Some("vscode")),
+        launcher("Cursor", "Editores", "cursor {path}", false, Some("cursor")),
+        launcher("Zed", "Editores", "zed {path}", false, Some("zed")),
+        launcher("Claude Code", "Agentes de IA", "claude", true, Some("utilities-terminal")),
+        launcher("Gemini CLI", "Agentes de IA", "gemini", true, Some("utilities-terminal")),
+        launcher("Codex", "Agentes de IA", "codex", true, Some("utilities-terminal")),
+        launcher("Gerenciador de arquivos", "Arquivos", "xdg-open {path}", false, Some("system-file-manager")),
     ]
 }
 

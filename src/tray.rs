@@ -66,9 +66,11 @@ impl AppTray {
             last_group = Some(l.group.as_str());
 
             let (launcher, path) = ((*l).clone(), project.path.clone());
+            let icon_name = launcher::resolve_icon(l);
             items.push(
                 StandardItem {
                     label: l.name.clone(),
+                    icon_name,
                     activate: Box::new(move |_| launcher::open(&launcher, &path)),
                     ..Default::default()
                 }
