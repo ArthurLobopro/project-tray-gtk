@@ -8,7 +8,42 @@ System tray para abrir pastas de projetos no terminal, em editores e em agentes 
 
 Fedora: `gtk4-devel dbus-devel` · Arch: `gtk4 dbus`
 
-## Executar
+## Compilação e Instalação (com Autostart)
+
+O processo de instalação compila o executável e registra o aplicativo tanto no menu do sistema quanto na inicialização automática (XDG Autostart).
+
+### Instalação para o usuário atual (sem sudo)
+
+```bash
+make install-user
+# ou: ./install.sh --user
+```
+
+Isso instala:
+- Binário em `~/.local/bin/project-tray`
+- Entrada de aplicativo em `~/.local/share/applications/project-tray.desktop`
+- Inicialização automática em `~/.config/autostart/project-tray.desktop`
+
+### Instalação no sistema (global / requer sudo)
+
+```bash
+sudo make install
+# ou: sudo ./install.sh --system
+```
+
+Isso instala:
+- Binário em `/usr/local/bin/project-tray`
+- Entrada de aplicativo em `/usr/local/share/applications/project-tray.desktop`
+- Inicialização automática em `/etc/xdg/autostart/project-tray.desktop`
+
+### Desinstalação
+
+```bash
+make uninstall-user     # Para desinstalar do usuário
+# ou: sudo make uninstall # Para desinstalar do sistema
+```
+
+## Executar em desenvolvimento
 
     cargo run --release
 

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Project Tray
+Comment=System tray para gerenciar e abrir projetos
+Exec=project-tray
+Icon=folder
+Terminal=false
+Categories=Development;Utility;
+StartupNotify=false
+X-GNOME-Autostart-enabled=true
+X-KDE-autostart-after=panel
