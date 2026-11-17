@@ -41,6 +41,29 @@ fn main() -> glib::ExitCode {
                         handle.update(|t| t.add_category(&name))
                     });
                 }
+                Msg::EditProject(info) => {
+                    ui::edit_project_window(
+                        &app_clone,
+                        info.project,
+                        info.current_category,
+                        info.all_categories,
+                        move |cat, project| {
+                            handle.update(|t| {
+                                t.edit_project(
+                                    info.category_index,
+                                    info.project_index,
+                                    cat.as_deref(),
+                                    project,
+                                )
+                            })
+                        },
+                    );
+                }
+                Msg::EditCategory(info) => {
+                    ui::edit_category_window(&app_clone, info.current_name, move |new_name| {
+                        handle.update(|t| t.rename_category(info.category_index, &new_name))
+                    });
+                }
             }
         }
     });

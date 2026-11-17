@@ -5,10 +5,29 @@ use crate::launcher;
 use ksni::menu::{StandardItem, SubMenu};
 use ksni::MenuItem;
 
+/// Dados para a janela de edição de projeto.
+#[derive(Clone, Debug)]
+pub struct EditProjectInfo {
+    pub category_index: Option<usize>,
+    pub project_index: usize,
+    pub project: Project,
+    pub current_category: Option<String>,
+    pub all_categories: Vec<String>,
+}
+
+/// Dados para a janela de renomeação de categoria.
+#[derive(Clone, Debug)]
+pub struct EditCategoryInfo {
+    pub category_index: usize,
+    pub current_name: String,
+}
+
 /// Mensagens do tray para a thread do GTK (que desenha as janelas).
 pub enum Msg {
     AddProject(Vec<String>), // nomes das categorias existentes
     AddCategory,
+    EditProject(EditProjectInfo),
+    EditCategory(EditCategoryInfo),
 }
 
 pub struct AppTray {
@@ -33,8 +52,25 @@ impl AppTray {
         self.persist()
     }
 
+    pub fn edit_project(
+        &mut self,
+        from_category: Option<usize>,
+        from_index: usize,
+        target_category: Option<&str>,
+        project: Project,
+    ) -> Result<(), String> {
+        self.data
+            .edit_project(from_category, from_index, target_category, project)?;
+        self.persist()
+    }
+
     pub fn add_category(&mut self, name: &str) -> Result<(), String> {
         self.data.add_category(name)?;
+        self.persist()
+    }
+
+    pub fn rename_category(&mut self, index: usize, new_name: &str) -> Result<(), String> {
+        self.data.rename_category(index, new_name)?;
         self.persist()
     }
 
@@ -48,13 +84,14 @@ impl AppTray {
         let _ = self.persist();
     }
 
-    /// Submenu de um projeto: terminal / editores / agentes de IA / remover.
+    /// Submenu de um projeto: terminal / editores / agentes de IA / editar / remover.
     fn project_item(
         &self,
         project: &Project,
         category: Option<usize>,
         index: usize,
         available_launchers: &[&crate::data::Launcher],
+        all_categories: &[String],
     ) -> MenuItem<Self> {
         let mut items: Vec<MenuItem<Self>> = Vec::new();
         let mut last_group: Option<&str> = None;
@@ -90,10 +127,33 @@ impl AppTray {
         }
 
         items.push(MenuItem::Separator);
+
+        let edit_info = EditProjectInfo {
+            category_index: category,
+            project_index: index,
+            project: project.clone(),
+            current_category: category
+                .and_then(|ci| self.data.categories.get(ci))
+                .map(|c| c.name.clone()),
+            all_categories: all_categories.to_vec(),
+        };
+
+        items.push(
+            StandardItem {
+                label: "Editar projeto…".into(),
+                icon_name: "document-edit-symbolic".into(),
+                activate: Box::new(move |t: &mut Self| {
+                    let _ = t.tx.send_blocking(Msg::EditProject(edit_info.clone()));
+                }),
+                ..Default::default()
+            }
+            .into(),
+        );
+
         items.push(
             StandardItem {
                 label: "Remover projeto".into(),
-                icon_name: "list-remove-symbolic".into(),
+                icon_name: "edit-delete-symbolic".into(),
                 activate: Box::new(move |t: &mut Self| t.remove_project(category, index)),
                 ..Default::default()
             }
@@ -135,6 +195,7 @@ impl ksni::Tray for AppTray {
             .iter()
             .filter(|l| launcher::is_available(l))
             .collect();
+        let all_categories = self.data.category_names();
 
         // 1) categorias primeiro
         for (ci, cat) in self.data.categories.iter().enumerate() {
@@ -142,7 +203,9 @@ impl ksni::Tray for AppTray {
                 .projects
                 .iter()
                 .enumerate()
-                .map(|(pi, p)| self.project_item(p, Some(ci), pi, &available_launchers))
+                .map(|(pi, p)| {
+                    self.project_item(p, Some(ci), pi, &available_launchers, &all_categories)
+                })
                 .collect();
 
             if sub.is_empty() {
@@ -156,10 +219,27 @@ impl ksni::Tray for AppTray {
                 );
             }
             sub.push(MenuItem::Separator);
+
+            let cat_name = cat.name.clone();
+            sub.push(
+                StandardItem {
+                    label: "Renomear categoria…".into(),
+                    icon_name: "document-edit-symbolic".into(),
+                    activate: Box::new(move |t: &mut Self| {
+                        let _ = t.tx.send_blocking(Msg::EditCategory(EditCategoryInfo {
+                            category_index: ci,
+                            current_name: cat_name.clone(),
+                        }));
+                    }),
+                    ..Default::default()
+                }
+                .into(),
+            );
+
             sub.push(
                 StandardItem {
                     label: "Remover categoria".into(),
-                    icon_name: "list-remove-symbolic".into(),
+                    icon_name: "edit-delete-symbolic".into(),
                     activate: Box::new(move |t: &mut Self| t.remove_category(ci)),
                     ..Default::default()
                 }
@@ -182,7 +262,7 @@ impl ksni::Tray for AppTray {
             menu.push(MenuItem::Separator);
         }
         for (pi, p) in self.data.projects.iter().enumerate() {
-            menu.push(self.project_item(p, None, pi, &available_launchers));
+            menu.push(self.project_item(p, None, pi, &available_launchers, &all_categories));
         }
 
         if self.data.categories.is_empty() && self.data.projects.is_empty() {

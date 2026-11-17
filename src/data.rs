@@ -176,4 +176,220 @@ impl Data {
             self.categories.remove(index);
         }
     }
+
+    pub fn rename_category(&mut self, index: usize, new_name: &str) -> Result<(), String> {
+        let new_name = new_name.trim();
+        if new_name.is_empty() {
+            return Err("Informe um nome para a categoria.".into());
+        }
+        if index >= self.categories.len() {
+            return Err("Categoria não encontrada.".into());
+        }
+        if self
+            .categories
+            .iter()
+            .enumerate()
+            .any(|(i, c)| i != index && c.name.eq_ignore_ascii_case(new_name))
+        {
+            return Err("Já existe uma categoria com esse nome.".into());
+        }
+        self.categories[index].name = new_name.to_string();
+        Ok(())
+    }
+
+    pub fn edit_project(
+        &mut self,
+        from_category: Option<usize>,
+        from_index: usize,
+        target_category: Option<&str>,
+        new_project: Project,
+    ) -> Result<(), String> {
+        let new_name = new_project.name.trim();
+        if new_name.is_empty() {
+            return Err("O nome do projeto não pode ser vazio.".into());
+        }
+        let new_path = new_project.path.trim();
+        if new_path.is_empty() {
+            return Err("O caminho do projeto não pode ser vazio.".into());
+        }
+
+        let current_cat_name = from_category
+            .and_then(|ci| self.categories.get(ci))
+            .map(|c| c.name.as_str());
+
+        let same_category = match (current_cat_name, target_category) {
+            (None, None) => true,
+            (Some(a), Some(b)) => a == b,
+            _ => false,
+        };
+
+        if same_category {
+            let list = match from_category {
+                None => &mut self.projects,
+                Some(ci) => match self.categories.get_mut(ci) {
+                    Some(c) => &mut c.projects,
+                    None => return Err("Categoria não encontrada.".into()),
+                },
+            };
+            if from_index >= list.len() {
+                return Err("Projeto não encontrado.".into());
+            }
+            if list[from_index].path != new_path
+                && list
+                    .iter()
+                    .enumerate()
+                    .any(|(i, p)| i != from_index && p.path == new_path)
+            {
+                return Err("Essa pasta já está cadastrada neste local.".into());
+            }
+            list[from_index].name = new_name.to_string();
+            list[from_index].path = new_path.to_string();
+        } else {
+            // Verifica se a pasta já existe no destino
+            let dest_exists = match target_category {
+                None => self.projects.iter().any(|p| p.path == new_path),
+                Some(name) => match self.categories.iter().find(|c| c.name == name) {
+                    Some(c) => c.projects.iter().any(|p| p.path == new_path),
+                    None => return Err(format!("Categoria \"{name}\" não encontrada.")),
+                },
+            };
+            if dest_exists {
+                return Err("Essa pasta já está cadastrada na categoria de destino.".into());
+            }
+
+            // Remove da origem
+            let removed = match from_category {
+                None => {
+                    if from_index < self.projects.len() {
+                        Some(self.projects.remove(from_index))
+                    } else {
+                        None
+                    }
+                }
+                Some(ci) => {
+                    if let Some(c) = self.categories.get_mut(ci) {
+                        if from_index < c.projects.len() {
+                            Some(c.projects.remove(from_index))
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                }
+            };
+
+            if removed.is_none() {
+                return Err("Projeto não encontrado na origem.".into());
+            }
+
+            // Insere no destino
+            let dest_list = match target_category {
+                None => &mut self.projects,
+                Some(name) => {
+                    &mut self
+                        .categories
+                        .iter_mut()
+                        .find(|c| c.name == name)
+                        .unwrap()
+                        .projects
+                }
+            };
+            dest_list.push(Project {
+                name: new_name.to_string(),
+                path: new_path.to_string(),
+            });
+        }
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_rename_category() {
+        let mut data = Data::default();
+        data.add_category("Backend").unwrap();
+        assert!(data.rename_category(0, "Backend API").is_ok());
+        assert_eq!(data.categories[0].name, "Backend API");
+
+        // Nome vazio deve falhar
+        assert!(data.rename_category(0, "").is_err());
+    }
+
+    #[test]
+    fn test_edit_project_rename_and_move_category() {
+        let mut data = Data::default();
+        data.add_category("Trabalho").unwrap();
+        data.add_category("Pessoal").unwrap();
+
+        data.add_project(
+            Some("Trabalho"),
+            Project {
+                name: "App 1".into(),
+                path: "/home/user/app1".into(),
+            },
+        )
+        .unwrap();
+
+        // 1. Renomear mantendo categoria
+        data.edit_project(
+            Some(0),
+            0,
+            Some("Trabalho"),
+            Project {
+                name: "App Renomeado".into(),
+                path: "/home/user/app1".into(),
+            },
+        )
+        .unwrap();
+        assert_eq!(data.categories[0].projects[0].name, "App Renomeado");
+
+        // 2. Mover para categoria Pessoal
+        data.edit_project(
+            Some(0),
+            0,
+            Some("Pessoal"),
+            Project {
+                name: "App Pessoal".into(),
+                path: "/home/user/app1".into(),
+            },
+        )
+        .unwrap();
+        assert!(data.categories[0].projects.is_empty());
+        assert_eq!(data.categories[1].projects.len(), 1);
+        assert_eq!(data.categories[1].projects[0].name, "App Pessoal");
+
+        // 3. Mover para Sem categoria (None)
+        data.edit_project(
+            Some(1),
+            0,
+            None,
+            Project {
+                name: "App Solto".into(),
+                path: "/home/user/app1".into(),
+            },
+        )
+        .unwrap();
+        assert!(data.categories[1].projects.is_empty());
+        assert_eq!(data.projects.len(), 1);
+        assert_eq!(data.projects[0].name, "App Solto");
+
+        // 4. Mover de Sem categoria para Trabalho
+        data.edit_project(
+            None,
+            0,
+            Some("Trabalho"),
+            Project {
+                name: "App de volta ao Trabalho".into(),
+                path: "/home/user/app1".into(),
+            },
+        )
+        .unwrap();
+        assert!(data.projects.is_empty());
+        assert_eq!(data.categories[0].projects.len(), 1);
+    }
 }
