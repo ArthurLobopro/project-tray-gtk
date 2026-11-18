@@ -234,24 +234,128 @@ fn known_name_icon(name: &str) -> Option<&'static str> {
     }
 }
 
+fn icon_file_exists_in_dir(dir: &Path, name: &str, depth: usize) -> bool {
+    if depth > 4 {
+        return false;
+    }
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return false;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_file() {
+            if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                if stem == name {
+                    if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
+                        if ext == "svg" || ext == "png" || ext == "xpm" {
+                            return true;
+                        }
+                    }
+                }
+            }
+        } else if path.is_dir() && !path.is_symlink() {
+            if icon_file_exists_in_dir(&path, name, depth + 1) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+pub fn icon_exists_in_system(icon_name: &str) -> bool {
+    let icon_dirs = [
+        dirs::data_dir().map(|d| d.join("icons")),
+        dirs::home_dir().map(|h| h.join(".local/share/icons")),
+        dirs::home_dir().map(|h| h.join(".icons")),
+        Some(PathBuf::from("/usr/share/icons")),
+        Some(PathBuf::from("/usr/local/share/icons")),
+        Some(PathBuf::from("/usr/share/pixmaps")),
+    ];
+
+    for root in icon_dirs.into_iter().flatten() {
+        if !root.is_dir() {
+            continue;
+        }
+        if icon_file_exists_in_dir(&root, icon_name, 0) {
+            return true;
+        }
+    }
+    false
+}
+
+/// Identifica se o launcher pertence a um agente de IA.
+pub fn is_ai_launcher(launcher: &Launcher) -> bool {
+    let group = launcher.group.to_lowercase();
+    if group.contains("ia") || group.contains("ai") || group.contains("agente") {
+        return true;
+    }
+    let lower_name = launcher.name.to_lowercase();
+    if lower_name.contains("claude")
+        || lower_name.contains("gemini")
+        || lower_name.contains("codex")
+        || lower_name.contains("chatgpt")
+        || lower_name.contains("copilot")
+        || lower_name.contains("agente")
+    {
+        return true;
+    }
+    let trimmed_cmd = launcher.command.trim();
+    if let Some(prog) = trimmed_cmd.split_whitespace().next() {
+        let prog_clean = Path::new(prog)
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or(prog);
+        match prog_clean {
+            "claude" | "gemini" | "codex" | "aider" | "ollama" => return true,
+            _ => {}
+        }
+    }
+    false
+}
+
+/// Resolve o ícone para agentes de IA seguindo a cadeia:
+/// 1. Chat (chat-message-new-symbolic, chat-message-new)
+/// 2. Terminal (utilities-terminal)
+pub fn resolve_ai_icon() -> String {
+    // 1. Ícone de Chat
+    for name in &["chat-message-new-symbolic", "chat-message-new"] {
+        if icon_exists_in_system(name) {
+            return (*name).to_string();
+        }
+    }
+
+    // 2. Fallback: Terminal
+    "utilities-terminal".to_string()
+}
+
 /// Identifica o ícone mais apropriado para o launcher no tema do sistema.
 pub fn resolve_icon(launcher: &Launcher) -> String {
+    let is_ai = is_ai_launcher(launcher);
+
     // 1. Ícone explícito configurado
     if let Some(ref icon) = launcher.icon {
         let trimmed = icon.trim();
         if !trimmed.is_empty() {
-            return trimmed.to_string();
+            // Se for agente de IA e estiver configurado com o terminal legado, usa a nova cadeia
+            if !(is_ai && trimmed == "utilities-terminal") {
+                return trimmed.to_string();
+            }
         }
+    }
+
+    // 2. Cadeia para agentes de IA: Chat -> Terminal
+    if is_ai {
+        return resolve_ai_icon();
     }
 
     let trimmed_cmd = launcher.command.trim();
 
-    // 2. Se comando vazio e in_terminal, é o terminal
+    // 3. Se comando vazio e in_terminal, é o terminal
     if trimmed_cmd.is_empty() && launcher.in_terminal {
         return "utilities-terminal".to_string();
     }
 
-    // 3. Pelo executável
+    // 4. Pelo executável
     if let Some(prog) = trimmed_cmd.split_whitespace().next() {
         let prog_clean = Path::new(prog)
             .file_name()
@@ -267,12 +371,12 @@ pub fn resolve_icon(launcher: &Launcher) -> String {
         }
     }
 
-    // 4. Pelo nome do launcher
+    // 5. Pelo nome do launcher
     if let Some(icon) = known_name_icon(&launcher.name) {
         return icon.to_string();
     }
 
-    // 5. Fallback
+    // 6. Fallback
     if launcher.in_terminal {
         "utilities-terminal".to_string()
     } else {
@@ -430,5 +534,22 @@ mod tests {
             icon: Some("my-custom-icon".into()),
         };
         assert_eq!(resolve_icon(&custom), "my-custom-icon");
+
+        let claude = Launcher {
+            name: "Claude Code".into(),
+            group: "Agentes de IA".into(),
+            command: "claude".into(),
+            in_terminal: true,
+            icon: None,
+        };
+        let icon = resolve_icon(&claude);
+        assert!(
+            icon == "chat-message-new-symbolic"
+                || icon == "chat-message-new"
+                || icon == "utilities-terminal"
+        );
+        if icon_exists_in_system("chat-message-new-symbolic") {
+            assert_eq!(icon, "chat-message-new-symbolic");
+        }
     }
 }

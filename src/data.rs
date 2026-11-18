@@ -61,9 +61,9 @@ pub fn default_launchers() -> Vec<Launcher> {
         launcher("VS Code", "Editores", "code {path}", false, Some("vscode")),
         launcher("Cursor", "Editores", "cursor {path}", false, Some("cursor")),
         launcher("Zed", "Editores", "zed {path}", false, Some("zed")),
-        launcher("Claude Code", "Agentes de IA", "claude", true, Some("utilities-terminal")),
-        launcher("Gemini CLI", "Agentes de IA", "gemini", true, Some("utilities-terminal")),
-        launcher("Codex", "Agentes de IA", "codex", true, Some("utilities-terminal")),
+        launcher("Claude Code", "Agentes de IA", "claude", true, None),
+        launcher("Gemini CLI", "Agentes de IA", "gemini", true, None),
+        launcher("Codex", "Agentes de IA", "codex", true, None),
         launcher("Gerenciador de arquivos", "Arquivos", "xdg-open {path}", false, Some("system-file-manager")),
     ]
 }
