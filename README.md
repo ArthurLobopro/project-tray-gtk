@@ -2,41 +2,115 @@
 
 System tray para abrir pastas de projetos no terminal, em editores e em agentes de IA.
 
-## Dependências (Debian/Ubuntu)
+## Instalação (Pacotes Prontos / Releases)
+
+Baixe a versão mais recente na aba de **Releases** do repositório no formato adequado para o seu sistema:
+
+### 1. Pacote Debian / Ubuntu (`.deb`)
+
+Recomendado para **Ubuntu, Debian, Linux Mint, Pop!_OS** e derivados:
+
+```bash
+sudo apt install ./project-tray_*_amd64.deb
+# ou: sudo dpkg -i ./project-tray_*_amd64.deb
+```
+
+> **Autostart**: O pacote instala o binário no sistema, adiciona o atalho no menu de aplicativos e configura automaticamente o início junto com a sessão (em `/etc/xdg/autostart/`).
+>
+> Para desinstalar:
+> ```bash
+> sudo apt remove project-tray
+> ```
+
+### 2. Pacote Universal (`.AppImage`)
+
+Funciona em praticamente qualquer distribuição Linux moderna sem necessidade de instalação:
+
+1. Baixe o arquivo `.AppImage` e dê permissão de execução:
+   ```bash
+   chmod +x project-tray-*-x86_64.AppImage
+   ```
+2. Execute diretamente:
+   ```bash
+   ./project-tray-*-x86_64.AppImage
+   ```
+
+> **Dica**: Se você usa [AppImageLauncher](https://github.com/TheAssassin/AppImageLauncher), ele se encarrega de mover o arquivo e criar os atalhos no menu do sistema.
+>
+> Para configurar autostart manualmente com o AppImage:
+> ```bash
+> mkdir -p ~/.config/autostart
+> cat <<EOF > ~/.config/autostart/project-tray.desktop
+> [Desktop Entry]
+> Type=Application
+> Name=Project Tray
+> Exec=$(pwd)/project-tray-v0.1.0-x86_64.AppImage
+> Icon=folder
+> Terminal=false
+> Categories=Development;
+> X-GNOME-Autostart-enabled=true
+> X-KDE-autostart-after=panel
+> EOF
+> ```
+
+### 3. Pacote Compactado (`.tar.gz`)
+
+Ideal para instalação rápida em qualquer distribuição através de script:
+
+1. Extraia o pacote baixado:
+   ```bash
+   tar -xzvf project-tray-*-linux-x86_64.tar.gz
+   cd project-tray-*-linux-x86_64
+   ```
+
+2. Instale para o seu usuário (sem necessidade de `sudo`):
+   ```bash
+   ./install.sh --user
+   # ou: make install-user
+   ```
+   *(Instala o executável em `~/.local/bin` e configura o autostart em `~/.config/autostart`)*
+
+   Ou instale no sistema inteiro (requer `sudo`):
+   ```bash
+   sudo ./install.sh --system
+   # ou: sudo make install
+   ```
+
+3. Para desinstalar futuramente:
+   ```bash
+   ./uninstall.sh --user       # se instalou para o usuário
+   # ou: sudo ./uninstall.sh --system # se instalou no sistema
+   ```
+
+---
+
+## Compilação a partir do Código-Fonte
+
+### Dependências de compilação (Debian/Ubuntu)
 
     sudo apt install build-essential pkg-config libgtk-4-dev libdbus-1-dev
 
 Fedora: `gtk4-devel dbus-devel` · Arch: `gtk4 dbus`
 
-## Compilação e Instalação (com Autostart)
+### Compilar e Instalar (com Autostart)
 
-O processo de instalação compila o executável e registra o aplicativo tanto no menu do sistema quanto na inicialização automática (XDG Autostart).
+O processo compila o executável via Cargo e registra o atalho no sistema e no autostart.
 
-### Instalação para o usuário atual (sem sudo)
+#### Instalação para o usuário atual (sem sudo)
 
 ```bash
 make install-user
 # ou: ./install.sh --user
 ```
 
-Isso instala:
-- Binário em `~/.local/bin/project-tray`
-- Entrada de aplicativo em `~/.local/share/applications/project-tray.desktop`
-- Inicialização automática em `~/.config/autostart/project-tray.desktop`
-
-### Instalação no sistema (global / requer sudo)
+#### Instalação no sistema (global / requer sudo)
 
 ```bash
 sudo make install
 # ou: sudo ./install.sh --system
 ```
 
-Isso instala:
-- Binário em `/usr/local/bin/project-tray`
-- Entrada de aplicativo em `/usr/local/share/applications/project-tray.desktop`
-- Inicialização automática em `/etc/xdg/autostart/project-tray.desktop`
-
-### Desinstalação
+#### Desinstalação
 
 ```bash
 make uninstall-user     # Para desinstalar do usuário
