@@ -584,6 +584,7 @@ impl<T: Tray + 'static> dbus_interface::StatusNotifierItem for InnerState<T> {
     }
 
     fn context_menu(&self, _x: i32, _y: i32) -> Result<(), dbus::MethodErr> {
+        self.update_menu();
         Ok(())
     }
 
@@ -695,6 +696,9 @@ impl<T: Tray + 'static> dbus_interface::Dbusmenu for InnerState<T> {
         ),
         dbus::MethodErr,
     > {
+        if parent_id == 0 {
+            self.update_menu();
+        }
         if let Some(menu_tree) = self.gen_dbusmenu_tree(
             parent_id,
             if recursion_depth < 0 {
@@ -784,11 +788,17 @@ impl<T: Tray + 'static> dbus_interface::Dbusmenu for InnerState<T> {
         Ok(not_found.into_iter().map(|event| event.0).collect())
     }
 
-    fn about_to_show(&self, _id: i32) -> Result<bool, dbus::MethodErr> {
+    fn about_to_show(&self, id: i32) -> Result<bool, dbus::MethodErr> {
+        if id == 0 {
+            self.update_menu();
+        }
         Ok(false)
     }
 
-    fn about_to_show_group(&self, _ids: Vec<i32>) -> Result<(Vec<i32>, Vec<i32>), dbus::MethodErr> {
+    fn about_to_show_group(&self, ids: Vec<i32>) -> Result<(Vec<i32>, Vec<i32>), dbus::MethodErr> {
+        if ids.contains(&0) {
+            self.update_menu();
+        }
         // FIXME: the DBus message should set the no reply flag
         Ok(Default::default())
     }
