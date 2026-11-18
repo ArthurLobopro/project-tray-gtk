@@ -36,20 +36,24 @@ if [ "$MODE" = "system" ]; then
     BIN_DIR="$PREFIX/bin"
     APP_DIR="$PREFIX/share/applications"
     AUTOSTART_DIR="/etc/xdg/autostart"
+    ICON_DIR="$PREFIX/share/icons/hicolor/scalable/apps"
 
     echo "==> Removendo do sistema..."
     rm -f "$BIN_DIR/$BIN_NAME"
     rm -f "$APP_DIR/$DESKTOP_FILE"
     rm -f "$AUTOSTART_DIR/$DESKTOP_FILE"
+    rm -f "$ICON_DIR/project-tray.svg"
 else
     BIN_DIR="${HOME}/.local/bin"
     APP_DIR="${HOME}/.local/share/applications"
     AUTOSTART_DIR="${HOME}/.config/autostart"
+    ICON_DIR="${HOME}/.local/share/icons/hicolor/scalable/apps"
 
     echo "==> Removendo do usuário ($USER)..."
     rm -f "$BIN_DIR/$BIN_NAME"
     rm -f "$APP_DIR/$DESKTOP_FILE"
     rm -f "$AUTOSTART_DIR/$DESKTOP_FILE"
+    rm -f "$ICON_DIR/project-tray.svg"
 fi
 
 echo "Desinstalação concluída!"

@@ -45,6 +45,7 @@ if [ "$MODE" = "system" ]; then
     BIN_DIR="$PREFIX/bin"
     APP_DIR="$PREFIX/share/applications"
     AUTOSTART_DIR="/etc/xdg/autostart"
+    ICON_DIR="$PREFIX/share/icons/hicolor/scalable/apps"
 
     echo "==> Instalando no sistema (PREFIX=$PREFIX)..."
     install -d "$BIN_DIR"
@@ -53,10 +54,15 @@ if [ "$MODE" = "system" ]; then
     install -m 644 "$DESKTOP_FILE" "$APP_DIR/$DESKTOP_FILE"
     install -d "$AUTOSTART_DIR"
     install -m 644 "$DESKTOP_FILE" "$AUTOSTART_DIR/$DESKTOP_FILE"
+    if [ -f assets/project-tray.svg ]; then
+        install -d "$ICON_DIR"
+        install -m 644 assets/project-tray.svg "$ICON_DIR/project-tray.svg"
+    fi
 else
     BIN_DIR="${HOME}/.local/bin"
     APP_DIR="${HOME}/.local/share/applications"
     AUTOSTART_DIR="${HOME}/.config/autostart"
+    ICON_DIR="${HOME}/.local/share/icons/hicolor/scalable/apps"
 
     echo "==> Instalando para o usuário ($USER)..."
     install -d "$BIN_DIR"
@@ -65,6 +71,10 @@ else
     install -m 644 "$DESKTOP_FILE" "$APP_DIR/$DESKTOP_FILE"
     install -d "$AUTOSTART_DIR"
     install -m 644 "$DESKTOP_FILE" "$AUTOSTART_DIR/$DESKTOP_FILE"
+    if [ -f assets/project-tray.svg ]; then
+        install -d "$ICON_DIR"
+        install -m 644 assets/project-tray.svg "$ICON_DIR/project-tray.svg"
+    fi
 
     if ! echo "$PATH" | tr ':' '\n' | grep -qx "$BIN_DIR"; then
         echo ""

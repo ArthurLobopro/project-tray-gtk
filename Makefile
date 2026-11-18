@@ -16,12 +16,15 @@ USER_BINDIR ?= $(USER_PREFIX)/bin
 USER_DATADIR ?= $(USER_PREFIX)/share
 USER_AUTOSTARTDIR ?= $(HOME)/.config/autostart
 
-.PHONY: all build check test clean install uninstall install-user uninstall-user
+.PHONY: all build check test clean package install uninstall install-user uninstall-user
 
 all: build
 
 build:
 	$(CARGO) build --release
+
+package:
+	./package.sh
 
 check:
 	$(CARGO) check
@@ -40,11 +43,14 @@ install: build
 	install -m 644 "$(DESKTOP_FILE)" "$(DESTDIR)$(DATADIR)/applications/$(DESKTOP_FILE)"
 	install -d "$(DESTDIR)$(SYSCONFDIR)/xdg/autostart"
 	install -m 644 "$(DESKTOP_FILE)" "$(DESTDIR)$(SYSCONFDIR)/xdg/autostart/$(DESKTOP_FILE)"
+	install -d "$(DESTDIR)$(DATADIR)/icons/hicolor/scalable/apps"
+	install -m 644 assets/project-tray.svg "$(DESTDIR)$(DATADIR)/icons/hicolor/scalable/apps/project-tray.svg"
 
 uninstall:
 	rm -f "$(DESTDIR)$(BINDIR)/$(BIN_NAME)"
 	rm -f "$(DESTDIR)$(DATADIR)/applications/$(DESKTOP_FILE)"
 	rm -f "$(DESTDIR)$(SYSCONFDIR)/xdg/autostart/$(DESKTOP_FILE)"
+	rm -f "$(DESTDIR)$(DATADIR)/icons/hicolor/scalable/apps/project-tray.svg"
 
 # Instalação para o usuário atual (sem sudo)
 install-user: build
@@ -54,8 +60,11 @@ install-user: build
 	install -m 644 "$(DESKTOP_FILE)" "$(USER_DATADIR)/applications/$(DESKTOP_FILE)"
 	install -d "$(USER_AUTOSTARTDIR)"
 	install -m 644 "$(DESKTOP_FILE)" "$(USER_AUTOSTARTDIR)/$(DESKTOP_FILE)"
+	install -d "$(USER_DATADIR)/icons/hicolor/scalable/apps"
+	install -m 644 assets/project-tray.svg "$(USER_DATADIR)/icons/hicolor/scalable/apps/project-tray.svg"
 
 uninstall-user:
 	rm -f "$(USER_BINDIR)/$(BIN_NAME)"
 	rm -f "$(USER_DATADIR)/applications/$(DESKTOP_FILE)"
 	rm -f "$(USER_AUTOSTARTDIR)/$(DESKTOP_FILE)"
+	rm -f "$(USER_DATADIR)/icons/hicolor/scalable/apps/project-tray.svg"

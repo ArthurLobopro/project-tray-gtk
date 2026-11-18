@@ -43,6 +43,28 @@ make uninstall-user     # Para desinstalar do usuário
 # ou: sudo make uninstall # Para desinstalar do sistema
 ```
 
+## Empacotamento e Releases
+
+### Gerar pacotes localmente (.deb, .AppImage, .tar.gz)
+
+```bash
+make package
+# ou: ./package.sh [versão]
+```
+
+Os arquivos serão gerados no diretório `dist/`.
+
+### Releases automáticas (GitHub Actions)
+
+O workflow `.github/workflows/release.yml` é disparado automaticamente ao criar uma tag de versão:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+Ele compila o aplicativo no Ubuntu e anexa automaticamente os pacotes `.deb`, `.AppImage` e `.tar.gz` à nova Release no GitHub. Também pode ser disparado manualmente via **Actions** na interface do repositório (com suporte a informar a versão desejada).
+
 ## Executar em desenvolvimento
 
     cargo run --release
